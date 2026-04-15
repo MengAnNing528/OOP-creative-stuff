@@ -199,12 +199,12 @@ public:
         cout << "-----------------------------------------------" << endl;
         cout << "|                  Player's Info              |" << endl;
         cout << "-----------------------------------------------" << endl;
-        cout << " Name         : " << PlayerName << endl;
-        cout << " Team         : " << PlayerTeam << endl;
-        cout << " Age          : " << PlayerAge << endl;
-        cout << " Number       : " << PlayerNumber << endl;
-        cout << " Salary       : " << PlayerSalary << endl;
-        cout << " Contract Term: " << PlayerContractTerm << "years" << endl;
+        cout << " Name          : " << PlayerName << endl;
+        cout << " Team          : " << PlayerTeam << endl;
+        cout << " Age           : " << PlayerAge << endl;
+        cout << " Number        : " << PlayerNumber << endl;
+        cout << " Salary        : " << PlayerSalary << endl;
+        cout << " Contract Term : " << PlayerContractTerm << "years" << endl;
     }
 };
 
