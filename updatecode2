@@ -435,7 +435,39 @@ void ShowForwards()
 //=================================================
 void ShowPlayersByPosition()
 {
-    if (allGoalies.size() == 0 && allDefenders.size() == 0 && allForwards.size() == 0)
+    {
+    cout << "\n=== ВЫБОР АМПЛУА ===" << endl;
+    cout << "Введите амплуа (вратарь, защитник, нападающий): ";
+    
+    clearInput();
+    string position;
+    getline(cin, position);
+    
+    // Приводим строку к нижнему регистру для сравнения
+    for (int i = 0; i < position.length(); i++)
+    {
+        position[i] = tolower(position[i]);
+    }
+    
+    if (position == "вратарь" || position == "вратари" || position == "goalie" || position == "goalies")
+    {
+        ShowGoalies();
+    }
+    else if (position == "защитник" || position == "защитники" || position == "defender" || position == "defenders")
+    {
+        ShowDefenders();
+    }
+    else if (position == "нападающий" || position == "нападающие" || position == "forward" || position == "forwards")
+    {
+        ShowForwards();
+    }
+    else
+    {
+        cout << "\n Ошибка! Неизвестное амплуа: " << position << endl;
+        cout << "Доступные амплуа: вратарь, защитник, нападающий" << endl;
+    }
+}
+    //if (allGoalies.size() == 0 && allDefenders.size() == 0 && allForwards.size() == 0)
     {
         cout << "\n Список игроков пуст!" << endl;
         return;
@@ -464,7 +496,7 @@ void ShowPlayersByPosition()
         default:
             cout << "\n Неверный выбор! Введите число от 1 до 3." << endl;
             break;
-    }
+    }//
 }
 
 //=================================================
