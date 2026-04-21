@@ -1,0 +1,668 @@
+//Деятельность хоккейного клуба по учету игроков, у которых
+//действующие контракты(вратари, защитники, нападающие).Необходимо
+//выдать список игроков заданного амплуа, название которого получено с
+//помощью ввода с консоли
+
+#include <iostream>
+#include <string>
+#include <limits>
+#include <vector>
+#include <cctype>
+#include <memory>
+
+using namespace std;
+
+// Функция для очистки буфера ввода
+void clearInput()
+{
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+}
+
+//=================================================
+//Secure input helper features
+//=================================================
+string safeString()
+{
+    string line;
+    getline(cin, line);
+    while (line.empty())
+    {
+        cout << "String can't be empty. Try again: ";
+        getline(cin, line);
+    }
+    return line;
+}
+
+int safeInt()
+{
+    int value;
+    while (true)
+    {
+        cin >> value;
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits <streamsize> ::max(), '\n');
+            cout << "Error. Enter number: ";
+        }
+        else
+        {
+            cin.ignore(numeric_limits <streamsize> ::max(), '\n');
+            return value;
+        }
+    }
+}
+
+//=================================================
+// КЛАСС ПОЗИЦИЯ - для композиции с игроком
+//=================================================
+class Position
+{
+private:
+    string positionName;
+    string positionCode;
+    int typicalNumber; // типичный номер для этой позиции
+    
+public:
+    // Конструктор
+    Position(string name, string code, int number)
+    {
+        positionName = name;
+        positionCode = code;
+        typicalNumber = number;
+    }
+    
+    // Геттеры
+    string getPositionName() const { return positionName; }
+    string getPositionCode() const { return positionCode; }
+    int getTypicalNumber() const { return typicalNumber; }
+    
+    // Вывод информации о позиции
+    void printPosition() const
+    {
+        cout << positionName << " (" << positionCode << ")";
+    }
+    
+    // Статические методы для создания предопределённых позиций
+    static Position createGoalie()
+    {
+        return Position("Вратарь", "G", 1);
+    }
+    
+    static Position createDefender()
+    {
+        return Position("Защитник", "D", 2);
+    }
+    
+    static Position createForward()
+    {
+        return Position("Нападающий", "F", 3);
+    }
+    
+    // Метод для получения позиции по строковому вводу
+    static Position getPositionByString(const string& input)
+    {
+        string lowerInput = input;
+        for (int i = 0; i < lowerInput.length(); i++)
+        {
+            lowerInput[i] = tolower(lowerInput[i]);
+        }
+        
+        if (lowerInput == "вратарь" || lowerInput == "вратари" || 
+            lowerInput == "goalie" || lowerInput == "goalies" ||
+            lowerInput == "вратар" || lowerInput == "вратаря")
+        {
+            return createGoalie();
+        }
+        else if (lowerInput == "защитник" || lowerInput == "защитники" || 
+                 lowerInput == "defender" || lowerInput == "defenders" ||
+                 lowerInput == "защитника" || lowerInput == "защитников")
+        {
+            return createDefender();
+        }
+        else if (lowerInput == "нападающий" || lowerInput == "нападающие" || 
+                 lowerInput == "forward" || lowerInput == "forwards" ||
+                 lowerInput == "нападающего" || lowerInput == "нападающих")
+        {
+            return createForward();
+        }
+        else
+        {
+            // По умолчанию возвращаем нападающего
+            cout << "Позиция не распознана. Будет установлен Нападающий по умолчанию." << endl;
+            return createForward();
+        }
+    }
+};
+
+//=================================================
+// КЛАСС ИГРОК - использует композицию с Position
+//=================================================
+class Player
+{
+private:
+    string playerName;
+    string playerTeam;
+    int playerAge;
+    int playerNumber;
+    int playerSalary;
+    double playerContractTerm;
+    Position position; // КОМПОЗИЦИЯ: игрок имеет позицию
+    
+public:
+    // Конструктор с параметрами (используем композицию - Position создаётся внутри)
+    Player(string name, string team, int age, int number, int salary, double contr_term, const Position& pos)
+        : position(pos) // инициализация позиции через список инициализации
+    {
+        playerName = name;
+        playerTeam = team;
+        
+        if (age >= 18 && age <= 55)
+        {
+            playerAge = age;
+        }
+        else
+        {
+            playerAge = 18;
+            cout << "Player should be older than 18 y/o" << endl;
+        }
+
+        if (number >= 1 && number <= 99)
+        {
+            playerNumber = number;
+        }
+        else
+        {
+            playerNumber = 1;
+            cout << "Number must be between 1 and 99" << endl;
+        }
+
+        if (salary >= 0)
+        {
+            playerSalary = salary;
+        }
+        else
+        {
+            playerSalary = 0;
+            cout << "Salary cannot be negative" << endl;
+        }
+        
+        playerContractTerm = contr_term;
+    }
+    
+    // Конструктор по умолчанию
+    Player() : position(Position::createForward())
+    {
+        playerName = "Ivanov Ivan Ivanych";
+        playerTeam = "Ak Bars";
+        playerAge = 18;
+        playerNumber = 1;
+        playerSalary = 100000;
+        playerContractTerm = 1.5;
+    }
+    
+    // Деструктор
+    ~Player()
+    {
+        // Позиция уничтожается автоматически вместе с игроком (композиция!)
+    }
+    
+    // Геттеры
+    string getPlayerName() const { return playerName; }
+    string getPlayerTeam() const { return playerTeam; }
+    int getPlayerAge() const { return playerAge; }
+    int getPlayerNumber() const { return playerNumber; }
+    int getPlayerSalary() const { return playerSalary; }
+    double getPlayerContractTerm() const { return playerContractTerm; }
+    Position getPosition() const { return position; }
+    string getPositionName() const { return position.getPositionName(); }
+    
+    // Сеттеры
+    void setPlayerName(string name) { playerName = name; }
+    void setPlayerTeam(string team) { playerTeam = team; }
+    void setPlayerAge(int age) { playerAge = age; }
+    void setPlayerNumber(int number) { playerNumber = number; }
+    void setPlayerSalary(int salary) { playerSalary = salary; }
+    void setPlayerContractTerm(double term) { playerContractTerm = term; }
+    
+    // Вывод информации об игроке
+    void printInfo() const
+    {
+        cout << "-----------------------------------------------" << endl;
+        cout << "|                  Player's Info              |" << endl;
+        cout << "-----------------------------------------------" << endl;
+        cout << " Name         : " << playerName << endl;
+        cout << " Team         : " << playerTeam << endl;
+        cout << " Age          : " << playerAge << endl;
+        cout << " Number       : " << playerNumber << endl;
+        cout << " Position     : ";
+        position.printPosition();
+        cout << endl;
+        cout << " Salary       : " << playerSalary << endl;
+        cout << " Contract Term: " << playerContractTerm << " years" << endl;
+        cout << "-----------------------------------------------" << endl;
+    }
+};
+
+//=================================================
+// КЛАСС ХОККЕЙНЫЙ КЛУБ - использует агрегацию для игроков
+//=================================================
+class HockeyClub
+{
+private:
+    string clubName;
+    string city;
+    int foundationYear;
+    
+    // АГРЕГАЦИЯ: клуб хранит указатели на игроков
+    vector<Player*> players;
+    
+    // Вспомогательные методы
+    bool isNumberTaken(int number) const
+    {
+        for (int i = 0; i < players.size(); i++)
+        {
+            if (players[i]->getPlayerNumber() == number)
+                return true;
+        }
+        return false;
+    }
+    
+    void showAvailableNumbers() const
+    {
+        cout << "Свободные номера: ";
+        int count = 0;
+        for (int num = 1; num <= 99; num++)
+        {
+            if (!isNumberTaken(num))
+            {
+                cout << num << " ";
+                count++;
+            }
+        }
+        if (count == 0)
+        {
+            cout << "Нет свободных номеров";
+        }
+        cout << endl;
+    }
+    
+    void showPlayersByPositionType(const string& positionName) const
+    {
+        bool found = false;
+        int counter = 1;
+        for (int i = 0; i < players.size(); i++)
+        {
+            if (players[i]->getPositionName() == positionName)
+            {
+                if (!found)
+                {
+                    cout << "\n=== " << positionName << " ===" << endl;
+                    cout << "=================================" << endl;
+                    found = true;
+                }
+                cout << counter++ << ". "
+                     << players[i]->getPlayerName() << " | "
+                     << players[i]->getPlayerAge() << " лет | "
+                     << "Номер: " << players[i]->getPlayerNumber() << " | "
+                     << "Команда: " << players[i]->getPlayerTeam() << endl;
+            }
+        }
+        
+        if (!found)
+        {
+            cout << "\n " << positionName << " отсутствуют!" << endl;
+        }
+        else
+        {
+            cout << "Всего " << positionName << ": " << (counter - 1) << endl;
+        }
+    }
+    
+public:
+    // Конструктор
+    HockeyClub(string name, string clubCity, int year)
+    {
+        clubName = name;
+        city = clubCity;
+        foundationYear = year;
+        
+        cout << "\n========================================" << endl;
+        cout << "Хоккейный клуб \"" << clubName << "\" основан в " << foundationYear << " году в городе " << city << endl;
+        cout << "Клуб готов к работе!" << endl;
+        cout << "В клубе пока нет игроков. Добавьте их через меню." << endl;
+        cout << "========================================" << endl;
+    }
+    
+    // Деструктор
+    ~HockeyClub()
+    {
+        for (int i = 0; i < players.size(); i++)
+        {
+            delete players[i];
+        }
+        players.clear();
+        cout << "\nКлуб \"" << clubName << "\" расформирован. ";
+        cout << "Все игроки покинули клуб." << endl;
+    }
+    
+    // Геттеры
+    string getClubName() const { return clubName; }
+    string getCity() const { return city; }
+    int getFoundationYear() const { return foundationYear; }
+    int getTotalPlayers() const { return players.size(); }
+    
+    // Добавление игрока в клуб
+    void addPlayer(Player* player)
+    {
+        if (!isNumberTaken(player->getPlayerNumber()))
+        {
+            players.push_back(player);
+            cout << "\n ИГРОК УСПЕШНО ДОБАВЛЕН В КЛУБ!" << endl;
+            cout << " Позиция: " << player->getPositionName() << endl;
+        }
+        else
+        {
+            cout << "\n ОШИБКА: Номер " << player->getPlayerNumber() << " уже занят!" << endl;
+            delete player;
+        }
+    }
+    
+    // Создание и добавление игрока с текстовым вводом позиции
+    void createAndAddPlayer(string name, string team, int age, int number, int salary, double contractTerm, const string& positionStr)
+    {
+        if (isNumberTaken(number))
+        {
+            cout << "\n ОШИБКА: Номер " << number << " уже занят!" << endl;
+            showAvailableNumbers();
+            return;
+        }
+        
+        // КОМПОЗИЦИЯ: создаём позицию на основе текстового ввода
+        Position pos = Position::getPositionByString(positionStr);
+        Player* newPlayer = new Player(name, team, age, number, salary, contractTerm, pos);
+        
+        players.push_back(newPlayer);
+        cout << "\n ИГРОК УСПЕШНО СОЗДАН И ДОБАВЛЕН В КЛУБ!" << endl;
+        cout << " Позиция: " << pos.getPositionName() << endl;
+    }
+    
+    // Удаление игрока по имени
+    bool removePlayerByName(string name)
+    {
+        for (int i = 0; i < players.size(); i++)
+        {
+            if (players[i]->getPlayerName() == name)
+            {
+                cout << "\nНайден игрок:" << endl;
+                cout << "  ФИО: " << players[i]->getPlayerName() << endl;
+                cout << "  Позиция: " << players[i]->getPositionName() << endl;
+                cout << "  Команда: " << players[i]->getPlayerTeam() << endl;
+                
+                cout << "\nВы уверены, что хотите удалить этого игрока? (y/n): ";
+                char confirm;
+                cin >> confirm;
+                
+                if (confirm == 'y' || confirm == 'Y')
+                {
+                    delete players[i];
+                    players.erase(players.begin() + i);
+                    cout << " Игрок успешно удалён из клуба!" << endl;
+                    return true;
+                }
+                else
+                {
+                    cout << " Удаление отменено." << endl;
+                    return false;
+                }
+            }
+        }
+        
+        cout << " Игрок с именем \"" << name << "\" не найден в клубе!" << endl;
+        return false;
+    }
+    
+    // Показать всех игроков
+    void showAllPlayers() const
+    {
+        if (players.size() == 0)
+        {
+            cout << "\n В клубе \"" << clubName << "\" нет игроков!" << endl;
+            return;
+        }
+        
+        cout << "\n=== КЛУБ: " << clubName << " (" << city << ") ===" << endl;
+        cout << "=================================" << endl;
+        
+        showPlayersByPositionType("Вратарь");
+        showPlayersByPositionType("Защитник");
+        showPlayersByPositionType("Нападающий");
+        
+        cout << "\n=================================" << endl;
+        cout << "ВСЕГО ИГРОКОВ: " << players.size() << endl;
+    }
+    
+    // Показать игроков по амплуа (ввод с консоли)
+    void showPlayersByPosition() const
+    {
+        if (players.size() == 0)
+        {
+            cout << "\n В клубе нет игроков! Сначала добавьте игроков." << endl;
+            return;
+        }
+        
+        cout << "\n=== ВЫБОР АМПЛУА ===" << endl;
+        cout << "Введите амплуа (вратарь, защитник, нападающий): ";
+        
+        clearInput();
+        string position;
+        getline(cin, position);
+        
+        // Приводим к нижнему регистру
+        for (int i = 0; i < position.length(); i++)
+        {
+            position[i] = tolower(position[i]);
+        }
+        
+        if (position == "вратарь" || position == "вратари" || position == "goalie" || position == "goalies")
+        {
+            showPlayersByPositionType("Вратарь");
+        }
+        else if (position == "защитник" || position == "защитники" || position == "defender" || position == "defenders")
+        {
+            showPlayersByPositionType("Защитник");
+        }
+        else if (position == "нападающий" || position == "нападающие" || position == "forward" || position == "forwards")
+        {
+            showPlayersByPositionType("Нападающий");
+        }
+        else
+        {
+            cout << "\n Ошибка! Неизвестное амплуа: " << position << endl;
+            cout << "Доступные амплуа: вратарь, защитник, нападающий" << endl;
+        }
+    }
+    
+    // Информация о клубе
+    void showClubInfo() const
+    {
+        cout << "\n=== ИНФОРМАЦИЯ О КЛУБЕ ===" << endl;
+        cout << "Название: " << clubName << endl;
+        cout << "Город: " << city << endl;
+        cout << "Год основания: " << foundationYear << endl;
+        cout << "Всего игроков: " << players.size() << endl;
+        
+        int goalies = 0, defenders = 0, forwards = 0;
+        for (int i = 0; i < players.size(); i++)
+        {
+            if (players[i]->getPositionName() == "Вратарь") goalies++;
+            else if (players[i]->getPositionName() == "Защитник") defenders++;
+            else if (players[i]->getPositionName() == "Нападающий") forwards++;
+        }
+        
+        cout << "Вратарей: " << goalies << endl;
+        cout << "Защитников: " << defenders << endl;
+        cout << "Нападающих: " << forwards << endl;
+    }
+    
+    // Показать свободные номера
+    void showAvailableNumbersInClub() const
+    {
+        if (players.size() == 0)
+        {
+            cout << "\nВ клубе нет игроков. Все номера (1-99) свободны!" << endl;
+        }
+        else
+        {
+            showAvailableNumbers();
+        }
+    }
+};
+
+//=================================================
+// Функции для меню
+//=================================================
+void showMainMenu()
+{
+    cout << "\n=======================================================" << endl;
+    cout << "           ХОККЕЙНЫЙ КЛУБ - ГЛАВНОЕ МЕНЮ              " << endl;
+    cout << "=======================================================" << endl;
+    cout << " 1. Добавить игрока в клуб                             " << endl;
+    cout << " 2. Показать всех игроков клуба                        " << endl;
+    cout << " 3. Показать игроков по амплуа (ввод с консоли)        " << endl;
+    cout << " 4. Удалить игрока из клуба                            " << endl;
+    cout << " 5. Показать информацию о клубе                        " << endl;
+    cout << " 6. Показать свободные номера                          " << endl;
+    cout << " 7. Выйти                                              " << endl;
+    cout << "=======================================================" << endl;
+    cout << "Ваш выбор: ";
+}
+
+//=================================================
+// main function
+//=================================================
+int main()
+{
+    string clubName, city;
+    int foundationYear;
+    
+    // Ввод информации о клубе
+    cout << "\n=== СОЗДАНИЕ НОВОГО ХОККЕЙНОГО КЛУБА ===" << endl;
+    cout << "Введите название клуба: ";
+    clearInput();
+    getline(cin, clubName);
+    
+    cout << "Введите город базирования клуба: ";
+    getline(cin, city);
+    
+    cout << "Введите год основания клуба: ";
+    foundationYear = safeInt();
+    
+    // Создание клуба
+    HockeyClub club(clubName, city, foundationYear);
+    
+    int choice;
+    
+    do {
+        showMainMenu();
+        cin >> choice;
+        
+        switch(choice)
+        {
+            case 1:
+            {
+                string name, team, positionStr;
+                int age, number;
+                int salary = 5000;
+                double contractTerm = 1.5;
+                
+                clearInput();
+                
+                cout << "\n=== ДОБАВЛЕНИЕ НОВОГО ИГРОКА ===" << endl;
+                cout << "Введите ФИО игрока: ";
+                getline(cin, name);
+                
+                cout << "Введите название команды игрока: ";
+                getline(cin, team);
+                
+                bool validAge = false;
+                do {
+                    cout << "Введите возраст игрока (18-55): ";
+                    cin >> age;
+                    if (age >= 18 && age <= 55)
+                    {
+                        validAge = true;
+                    }
+                    else
+                    {
+                        cout << "Ошибка! Возраст должен быть от 18 до 55 лет" << endl;
+                        clearInput();
+                    }
+                } while (!validAge);
+                
+                bool validNumber = false;
+                do {
+                    cout << "Введите желаемый номер игрока (1-99): ";
+                    cin >> number;
+                    
+                    if (number < 1 || number > 99)
+                    {
+                        cout << "Номер должен быть в диапазоне от 1 до 99!" << endl;
+                    }
+                    else
+                    {
+                        validNumber = true;
+                    }
+                } while (!validNumber);
+                
+                clearInput();
+                cout << "\n--- ВЫБОР ПОЗИЦИИ ---" << endl;
+                cout << "Доступные позиции: вратарь, защитник, нападающий" << endl;
+                cout << "Введите позицию игрока: ";
+                getline(cin, positionStr);
+                
+                club.createAndAddPlayer(name, team, age, number, salary, contractTerm, positionStr);
+                break;
+            }
+            case 2:
+                club.showAllPlayers();
+                break;
+            case 3:
+                club.showPlayersByPosition();
+                break;
+            case 4:
+            {
+                if (club.getTotalPlayers() == 0)
+                {
+                    cout << "\nВ клубе нет игроков для удаления!" << endl;
+                }
+                else
+                {
+                    clearInput();
+                    cout << "\n=== УДАЛЕНИЕ ИГРОКА ===" << endl;
+                    cout << "Введите ФИО игрока, которого хотите удалить: ";
+                    string name;
+                    getline(cin, name);
+                    club.removePlayerByName(name);
+                }
+                break;
+            }
+            case 5:
+                club.showClubInfo();
+                break;
+            case 6:
+                club.showAvailableNumbersInClub();
+                break;
+            case 7:
+                cout << "\n До свидания!" << endl;
+                break;
+            default:
+                cout << "\n Неверный выбор!" << endl;
+        }
+    } while (choice != 7);
+    
+    cout << "\nЗавершение работы программы..." << endl;
+    
+    return 0;
+}
