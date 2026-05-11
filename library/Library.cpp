@@ -60,22 +60,21 @@ double safeDouble()
 // ==================== КЛАСС PUBLISHER ====================
 class PublishingHouse
 {
-protected:
+private:
     string name; // название издательства
-    string city; // страна издательства
     int foundingYear; // год основания
 
 public:
-    PublishingHouse() : name(""), city(""), foundingYear(0) {}
-    PublishingHouse(const string& n, const string& c, int year) : name(n), city(c), foundingYear(year) {}
+    PublishingHouse() : name(""), foundingYear(0) {}
+    PublishingHouse(const string& n, int year) {
+        name = n;
+        foundingYear = year;
+    }
     virtual ~PublishingHouse() {}
 
     // Геттеры и сеттеры
     void setName(const string& n) { name = n; }
     string getName() const { return name; }
-
-    void setCity(const string& c) { city = c; }
-    string getCity() const { return city; }
 
     void setFoundingYear(int year) { foundingYear = year; }
     int getFoundingYear() const { return foundingYear; }
@@ -83,7 +82,7 @@ public:
     // Уникальный метод
     void printHouseInfo() const
     {
-        cout << "Publishing house: " << name << ", founded in " << city << " in " << foundingYear << endl;
+        cout << "Publishing house: " << name << ", founded in " << foundingYear << endl;
     }
 
     // Методы ввода/вывода
@@ -92,15 +91,13 @@ public:
         cout << "=== Enter Publishing House Info ===" << endl;
         cout << "Enter publishing house name: ";
         name = safeString();
-        cout << "Enter publishing house city: ";
-        name = safeString();
         cout << "Enter founding year: ";
         foundingYear = safeInt();
     }
 
     virtual void outputPublisher() const
     {
-        cout << "Publishing house: " << name << ", city: " << city << ", year: " << foundingYear << endl;
+        cout << "Publishing house: " << name << ", year: " << foundingYear << endl;
     }
 };
 
