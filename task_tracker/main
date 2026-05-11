@@ -4,6 +4,7 @@
 
 using namespace std;
 
+//================== Base abstract class Task ===================
 class Task {
 protected:
     int taskId;
@@ -21,6 +22,7 @@ public:
     void reopen();
 };
 
+//================== Derived class BugTask ===================
 class BugTask : Task {
 private:
     string stepsToReproduce;
@@ -30,6 +32,7 @@ public:
     string getDetailedInfo();
 };
 
+//================== Derived class FeatureTask ===================
 class FeatureTask : Task {
 private:
     string businessRequirement;
@@ -39,6 +42,7 @@ public:
     string getDetailedInfo();
 };
 
+//================== Derived class DocumentationTask ===================
 class DocumentationTask : Task {
 private:
     string section;
