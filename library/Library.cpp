@@ -89,6 +89,7 @@ public:
     // Методы ввода/вывода
     virtual void inputPublisher()
     {
+        cout << "=== Enter Publishing House Info ===" << endl;
         cout << "Enter publishing house name: ";
         name = safeString();
         cout << "Enter publishing house city: ";
@@ -99,63 +100,48 @@ public:
 
     virtual void outputPublisher() const
     {
-        cout << "Publishing house: " << name << ", city: " << city << ", year: " << foundingYear;
+        cout << "Publishing house: " << name << ", city: " << city << ", year: " << foundingYear << endl;
     }
 };
 
 // ==================== КЛАСС AUTHOR ====================
 class Author {
 private:
-    string fullName;    // Полное имя
-    int birthYear;      // Год рождения
-    string country;     // Страна
+    string  AuthorName; // имя автора
+    string AuthorCountry; // страна автора
 
 public:
     // Конструкторы
-    Author() {
-        fullName = "Unknown";
-        birthYear = 1970;
-        country = "Unknown";
+    Author() : AuthorName("-"), AuthorCountry("-") {}
+    Author(const string& AN, const string& AC) {
+        AuthorName = AN;
+        AuthorCountry = AC;
     }
+    virtual ~Author() {}
 
-    Author(string name, int year, string cnt) {
-        fullName = name;
-        birthYear = year;
-        country = cnt;
-    }
+    void setName(const string& AN) { AuthorName = AN; }
+    string getName() const { return AuthorName; }
 
-    // Деструктор
-    ~Author() {
-        cout << "Author \"" << fullName << "\" destroyed" << endl;
+    void setCountry(const string& AC) { AuthorCountry = AC; }
+    string getCountry() const { return AuthorCountry; }
+
+    void printInfoAthor() const {
+        cout << "Author name:" << AuthorName << " from: " << AuthorCountry << endl;
     }
 
     // Ввод данных
-    void inputAuthor() {
+    virtual void inputAuthor() {
         cout << "=== Enter Author Info ===" << endl;
         cout << "Author full name: ";
-        getline(cin, fullName);
-        cout << "Birth year: ";
-        cin >> birthYear;
-        cin.ignore();
+        AuthorName = safeString();
         cout << "Country: ";
-        getline(cin, country);
+        AuthorCountry = safeString();
     }
 
     // Вывод данных
-    void outputAuthor() {
-        cout << "Author: " << fullName << " (born " << birthYear
-            << ", " << country << ")" << endl;
+    virtual void outputAuthor() const {
+        cout << "Author: " << AuthorName << " from " << AuthorCountry << endl;
     }
-
-    // Уникальный метод
-    int getAge(int currentYear) {
-        return currentYear - birthYear;
-    }
-
-    // Геттеры
-    string getFullName() const { return fullName; }
-    int getBirthYear() const { return birthYear; }
-    string getCountry() const { return country; }
 };
 
 // ==================== КЛАСС BOOK (НАСЛЕДНИК) ====================
@@ -206,9 +192,11 @@ public:
         cout << "Pages:  " << pages << endl;
         cout << "----------------------------------------" << endl;
 
-        outputPublisher();  // Вызов метода родительского класса
-        outputAuthor();     // Вызов метода родительского класса
+        //outputPublisher();  // Вызов метода родительского класса
+        //outputAuthor();     // Вызов метода родительского класса
 
+        printHouseInfo();
+        printInfoAthor();
         cout << "----------------------------------------" << endl;
     }
 
@@ -220,9 +208,9 @@ public:
 
 // ==================== ГЛАВНАЯ ФУНКЦИЯ ====================
 int main() {
-    cout << "╔════════════════════════════════════════╗" << endl;
-    cout << "║     LIBRARY MANAGEMENT SYSTEM          ║" << endl;
-    cout << "╚════════════════════════════════════════╝" << endl;
+    cout << "==========================================" << endl;
+    cout << "|     LIBRARY MANAGEMENT SYSTEM          |" << endl;
+    cout << "==========================================" << endl;
 
     // Создаём объект книги
     Book myBook;
