@@ -1,60 +1,106 @@
-﻿#include <iostream>
+#include <iostream>
 #include <string>
+#include <limits>
 using namespace std;
 
+//Безопасный ввод
+string safeString()
+{
+    string line;
+    getline(cin, line);
+    while (line.empty())
+    {
+        cout << "String can't be empty. Try again: ";
+        getline(cin, line);
+    }
+    return line;
+}
+
+int safeInt()
+{
+    int value;
+    while (true)
+    {
+        cin >> value;
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Error. Enter number: ";
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+    }
+}
+
+double safeDouble()
+{
+    double value;
+    while (true)
+    {
+        cin >> value;
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Error. Enter number: ";
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+    }
+}
+
+
 // ==================== КЛАСС PUBLISHER ====================
-class Publisher {
-private:
-    string name;        // Название издательства
-    string city;        // Город
-    int foundingYear;   // Год основания
+class PublishingHouse
+{
+protected:
+    string name; // название издательства
+    string city; // страна издательства
+    int foundingYear; // год основания
 
 public:
-    // Конструкторы
-    Publisher() {
-        name = "Unknown";
-        city = "Unknown";
-        foundingYear = 2000;
-    }
+    PublishingHouse() : name(""), city(""), foundingYear(0) {}
+    PublishingHouse(const string& n, const string& c, int year) : name(n), city(c), foundingYear(year) {}
+    virtual ~PublishingHouse() {}
 
-    Publisher(string n, string c, int year) {
-        name = n;
-        city = c;
-        foundingYear = year;
-    }
+    // Геттеры и сеттеры
+    void setName(const string& n) { name = n; }
+    string getName() const { return name; }
 
-    // Деструктор
-    ~Publisher() {
-        cout << "Publisher \"" << name << "\" destroyed" << endl;
-    }
+    void setCity(const string& c) { city = c; }
+    string getCity() const { return city; }
 
-    // Ввод данных
-    void inputPublisher() {
-        cout << "=== Enter Publisher Info ===" << endl;
-        cout << "Publisher name: ";
-        getline(cin, name);
-        cout << "City: ";
-        getline(cin, city);
-        cout << "Founding year: ";
-        cin >> foundingYear;
-        cin.ignore(); // очищаем буфер после cin
-    }
-
-    // Вывод данных
-    void outputPublisher() {
-        cout << "Publisher: " << name << ", " << city
-            << " (founded " << foundingYear << ")" << endl;
-    }
+    void setFoundingYear(int year) { foundingYear = year; }
+    int getFoundingYear() const { return foundingYear; }
 
     // Уникальный метод
-    void printCopyright() {
-        cout << "Copyright © " << foundingYear << " by " << name << endl;
+    void printHouseInfo() const
+    {
+        cout << "Publishing house: " << name << ", founded in " << city << " in " << foundingYear << endl;
     }
 
-    // Геттеры
-    string getName() const { return name; }
-    string getCity() const { return city; }
-    int getFoundingYear() const { return foundingYear; }
+    // Методы ввода/вывода
+    virtual void inputPublisher()
+    {
+        cout << "Enter publishing house name: ";
+        name = safeString();
+        cout << "Enter publishing house city: ";
+        name = safeString();
+        cout << "Enter founding year: ";
+        foundingYear = safeInt();
+    }
+
+    virtual void outputPublisher() const
+    {
+        cout << "Publishing house: " << name << ", city: " << city << ", year: " << foundingYear;
+    }
 };
 
 // ==================== КЛАСС AUTHOR ====================
@@ -113,7 +159,7 @@ public:
 };
 
 // ==================== КЛАСС BOOK (НАСЛЕДНИК) ====================
-class Book : public Publisher, public Author {
+class Book : public PublishingHouse, public Author {
 private:
     string title;       // Название книги
     string isbn;        // ISBN номер
@@ -121,7 +167,7 @@ private:
 
 public:
     // Конструктор по умолчанию
-    Book() : Publisher(), Author() {
+    Book() : PublishingHouse(), Author() {
         title = "Unknown";
         isbn = "000-0-00-000000-0";
         pages = 0;
@@ -136,11 +182,11 @@ public:
     void inputBook() {
         cout << "\n=== Enter Book Info ===" << endl;
         cout << "Title: ";
-        getline(cin, title);
+        title = safeString();
         cout << "ISBN (format: xxx-x-xx-xxxxxx-x): ";
         getline(cin, isbn);
         cout << "Number of pages: ";
-        cin >> pages;
+        pages = safeInt();
         cin.ignore();
 
         cout << "\n";
@@ -164,11 +210,6 @@ public:
         outputAuthor();     // Вызов метода родительского класса
 
         cout << "----------------------------------------" << endl;
-
-        // Демонстрация уникальных методов
-        printCopyright();                                  // Из Publisher
-        cout << "Author's age in 2024: " << getAge(2024) << endl;  // Из Author
-        cout << "Long book? " << (isLongBook() ? "Yes (more than 300 pages)" : "No") << endl;
     }
 
     // Уникальный метод класса Book
