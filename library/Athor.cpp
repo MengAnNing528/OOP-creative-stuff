@@ -16,47 +16,6 @@ string safeString()
     return line;
 }
 
-int safeInt()
-{
-    int value;
-    while (true)
-    {
-        cin >> value;
-        if (cin.fail())
-        {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Error. Enter number: ";
-        }
-        else
-        {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            return value;
-        }
-    }
-}
-
-double safeDouble()
-{
-    double value;
-    while (true)
-    {
-        cin >> value;
-        if (cin.fail())
-        {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Error. Enter number: ";
-        }
-        else
-        {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            return value;
-        }
-    }
-}
-
-
 class Athor
 {
 private:
