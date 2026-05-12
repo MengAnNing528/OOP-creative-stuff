@@ -1,8 +1,62 @@
 #include <iostream>
 #include <string>
+#include <limits>
 #include <vector>
 
 using namespace std;
+
+//================== Secure input helper features ==================
+string safeString()
+{
+    string line;
+    getline(cin, line);
+    while (line.empty())
+    {
+        cout << "String can't be empty. Try again: ";
+        getline(cin, line);
+    }
+    return line;
+}
+
+int safeInt()
+{
+    int value;
+    while (true)
+    {
+        cin >> value;
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits <streamsize> ::max(), '\n');
+            cout << "Error. Enter number: ";
+        }
+        else
+        {
+            cin.ignore(numeric_limits <streamsize> ::max(), '\n');
+            return value;
+        }
+    }
+}
+
+double safeDouble()
+{
+    double value;
+    while (true)
+    {
+        cin >> value;
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Error. Enter number: ";
+        }
+        else
+        {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+    }
+}
 
 //================== Additional class TaskType ===================
 class TaskType
