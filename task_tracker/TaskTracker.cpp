@@ -240,46 +240,44 @@ private:
     string stepsToReproduce;
     enum severityVariation { COSMETIC, NORMAL, CRITICAL, BLOCKER }; // варианты критического уровня ошибки
     severityVariation severity;
-    string severityToString(severityVariation s) const {
-    switch(s) {
-        case COSMETIC: return "Косметический";
-        case NORMAL: return "Обычный";
-        case CRITICAL: return "Критический";
-        case BLOCKER: return "Блокирующий";
-        default: return "Неизвестно";
-    }
-} 
-
+    string  BugSeverity;
+   
+    
 public:
     //Конструктор
     BugTask(const string& title, const string& description,
         const string& assignee, const string& priority, const string& steps, const string& varseverity) :
-        Task(title, description, assignee, priority), stepsToReproduce(steps), severityVariation(severityToString(varseverity)) {}
-    //
-    ~ BugTask(){
-        
+        Task(title, description, assignee, priority), stepsToReproduce(steps), severity(sev) {
+      
+        switch (severity) {
+            case COSMETIC: 
+                BugSeverity = "Косметический (мелкий визуальный дефект)";
+                break;
+            case NORMAL: 
+                BugSeverity = "Нормальный";
+                break;
+            case CRITICAL: 
+                BugSeverity = "Критический";
+                break;
+            case BLOCKER: 
+                BugSeverity = "Блокирующий";
+                break;
+            default: 
+                BugSeverity = "Неизвестно";
+        }
     }
-    //
+    //Деструктор
+    ~ BugTask(){    }
+    //Гетеры
     string getstepsToReproduce() const {return stepsToReproduce;}
-    string getBugSeverity() const { return severityToString(varseverity);}
-    //
+    string getBugSeverity() const { return BugSeverity; }
+    //Сеттеры
     void setstepsToReproduce(const string& steps){stepsToReproduce = steps;}
-    void setSeverity(severityVariation severityToString(varseverity)){severity = severityToString(varseverity);}
-
-    //
-    
-        
- 
-
-
-
-
-
-    //    
+    void setSeverity(const strig& sev){BugSeverity = sev;}
+    //Переопределённые методы
     string getTaskType() const override { return "Bug"; }
-
     string getDetailedInfo() const override {
-        return "Step by step/n" + stepToReproduce + "Severity/n" + severityToString(varseverity);
+        return "Step by step\n" + stepsToReproduce + "Severity\n" + ;
     };
 };
 
