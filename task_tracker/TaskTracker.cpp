@@ -235,40 +235,129 @@ public:
 int Task::nextId = 1;
 
 //================== Derived class BugTask ===================
-class BugTask : Task {
+class BugTask : public Task {
 private:
     string stepsToReproduce;
     string severity;
+    string getSeverityDescription() const {
+        if (severity == "Cosmetic") return "Cosmetic (minor visual defect)";
+        if (severity == "Normal") return "Normal (function works incorrectly)";
+        if (severity == "Critical") return "Critical (system does not work)";
+        if (severity == "Blocker") return "Blocker (work is completely blocked)";
+        return "Неизвестно";
+    }
+
 public:
-    string getTaskType();
-    string getDetailedInfo();
+    // Конструктор
+    BugTask(const string& title, const string& description,
+        const string& assignee, const string& priority,
+        const string& steps)
+        : Task(title, description, assignee, priority),
+          stepsToReproduce(steps){
+            int choice;
+            cout << "\n--- Bug Severity Selection ---" << endl;
+            cout << "1 - Cosmetic (minor visual defect)" << endl;
+            cout << "2 - Normal (feature works incorrectly)" << endl;
+            cout << "3 - Critical (system does not work)" << endl;
+            cout << "4 - Blocker (work is completely blocked)" << endl;
+            cout << "Enter number (1-4): ";
+            cin >> choice;
+
+            switch (choice) {
+                case 1:
+                    severity = "Cosmetic";
+                    break;
+                case 2:
+                    severity = "Normal";
+                    break;
+                case 3:
+                    severity = "Critical";
+                    break;
+                case 4:
+                    severity = "Blocker";
+                    break;
+                default:
+                    severity = "Normal"; // default value
+                    cout << "Invalid choice! Severity set to: Normal" << endl;
+            }
+
+            cout << "Selected severity: " << getSeverityDescription() << endl;
+
+
+        };
+
+    // Деструктор
+    ~BugTask() {}
+
+    // Геттеры
+    string getStepsToReproduce() const { return stepsToReproduce; }
+    string getBugSeverity() const { return severity; }
+
+    // Сеттеры
+    void setStepsToReproduce(const string& steps) { stepsToReproduce = steps; }
+    void setSeverity(const string& sev){severity = sev;}
+    // Переопределённые методы
+    string getTaskType() const override { return "Bug"; }
+
+    string getDetailedInfo() const override {
+        return "Severity: " + severity + "\n" +
+               "Step by step: " + stepsToReproduce;
+    }
 };
 
 //================== Derived class FeatureTask ===================
-class FeatureTask : Task {
-private:
-    string businessRequirement;
-    double estimatedHours;
-public:
-    string getTaskType();
-    string getDetailedInfo();
-};
+class FeatureTask : public Task{
+    private:
+        string 	businessRequirement;
+        double  estimatedHours;
+
+    public:
+        //
+        FeatureTask(const string& title, const string& description,
+        const string& assignee, const string& priority,const string& text,const double& amountime ): 
+        Task(title, description, assignee, priority), businessRequirement(text), estimatedHours(amountime){}
+
+        //
+        ~ FeatureTask(){}
+
+        //
+        string getBusinessRequirement() const { return businessRequirement;}
+        double getEstimatedHours() const {return estimatedHours;}
+
+        //Сеттер
+        void setBusinessRequirement(const string& text ) {businessRequirement = text;}
+        void setEstimatedHours(const double& amountime) {estimatedHours = amountime;}
+
+        //Переопределённые методы
+        string getTaskType() const override { return "Feature"; }
+
+        string getDetailedInfo() const override {
+            return "Business Requirement:\n" + businessRequirement + "\n" + "Estimated Hours: " + to_string(estimatedHours);
+            }
+};  
 
 //================== Derived class DocumentationTask ===================
-class DocumentationTask : Task {
-private:
-    string section;
-    string format;
-public:
-    string getTaskType();
-    string getDetailedInfo();
+class DocumentationTask : public Task{
+    private:
+        string section;
+        string format;
+    public:
+        //Конструктор
+        DocumentationTask(const string& title, const string& description,
+        const string& assignee, const string& priority,const string& sec,const string& form ):
+        Task(title, description, assignee, priority), section(sec), format(form) {}
+        //Деструктор
+        ~ DocumentationTask() {}
+        //Геттеры
+        string getSection() const {return section;}
+        string getFormat() const {return format;}
+        //Сеттеры
+        void setSection(const string& sec){section = sec;}
+        void setFormat(const string& form){format =form;}
+        //Переопределённые методы
+        string getTaskType() const override {return "Documentation";}
+        string getDetailedInfo() const override {return "Section of Documentation:\n " + section + " in " + format + " format";}
 };
-
-//================== Main class TaskManager ===================
-class TaskManager {
-
-};
-
 int main() {
 
 }
