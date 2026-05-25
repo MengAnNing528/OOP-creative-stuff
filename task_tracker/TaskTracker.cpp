@@ -235,13 +235,52 @@ public:
 int Task::nextId = 1;
 
 //================== Derived class BugTask ===================
-class BugTask : Task {
+class BugTask : public Task {
 private:
     string stepsToReproduce;
-    string severity;
+    enum severityVariation { COSMETIC, NORMAL, CRITICAL, BLOCKER }; // варианты критического уровня ошибки
+    severityVariation severity;
+    string severityToString(severityVariation s) const {
+    switch(s) {
+        case COSMETIC: return "Косметический";
+        case NORMAL: return "Обычный";
+        case CRITICAL: return "Критический";
+        case BLOCKER: return "Блокирующий";
+        default: return "Неизвестно";
+    }
+} 
+
 public:
-    string getTaskType();
-    string getDetailedInfo();
+    //Конструктор
+    BugTask(const string& title, const string& description,
+        const string& assignee, const string& priority, const string& steps, const string& varseverity) :
+        Task(title, description, assignee, priority), stepsToReproduce(steps), severityVariation(severityToString(varseverity)) {}
+    //
+    ~ BugTask(){
+        
+    }
+    //
+    string getstepsToReproduce() const {return stepsToReproduce;}
+    string getBugSeverity() const { return severityToString(varseverity);}
+    //
+    void setstepsToReproduce(const string& steps){stepsToReproduce = steps;}
+    void setSeverity(severityVariation severityToString(varseverity)){severity = severityToString(varseverity);}
+
+    //
+    
+        
+ 
+
+
+
+
+
+    //    
+    string getTaskType() const override { return "Bug"; }
+
+    string getDetailedInfo() const override {
+        return "Step by step/n" + stepToReproduce + "Severity/n" + severityToString(varseverity);
+    };
 };
 
 //================== Derived class FeatureTask ===================
