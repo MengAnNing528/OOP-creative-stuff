@@ -1,0 +1,422 @@
+// Файл определяет точку входа для приложения.
+#define WIN32_LEAN_AND_MEAN
+#include "framework.h"
+#include "Zaeb.h"
+#include "windows.h"
+#include "winuser.h"
+#include <string>
+#include <stdlib.h>
+#include <vector>
+using namespace std;
+#include "Source.cpp"
+#include "Source1.cpp"
+#define MAX_LOADSTRING 100
+
+// Глобальные переменные:
+HINSTANCE hInst;
+HWND Form1;
+HWND BossSelectionDialog = NULL;
+
+// Кнопки главного меню
+ObjectButton* lbl_text_hello = new ObjectButton(600, 10, 150, 100);
+ObjectButton* btn_hide = new ObjectButton(150, 50, 50, 150);
+ObjectButton* lbl_text_hide_button = new ObjectButton(600, 50, 200, 150);
+ObjectButton* btn_change = new ObjectButton(150, 50, 50, 210);
+ObjectButton* btn_select_participant = new ObjectButton(200, 50, 350, 210);
+ObjectButton* btn_select_boss = new ObjectButton(200, 50, 350, 270);
+ObjectButton* btn_exit = new ObjectButton(150, 50, 400, 390);
+
+// Выбранный босс
+BossInfo selectedBoss;
+
+void execute_application_postion_and_size(HWND Form, int width, int height)
+{
+    Sleep(1000);
+    int screen_width = GetSystemMetrics(SM_CXSCREEN);
+    int screen_height = GetSystemMetrics(SM_CYSCREEN);
+    int program_width = width;
+    int program_height = height;
+    int program_left = (screen_width / 2) - (program_width / 2);
+    int program_top = (screen_height / 2) - (program_height / 2);
+    SetWindowPos(Form, HWND_TOP, program_left, program_top, program_width, program_height, SWP_ASYNCWINDOWPOS);
+}
+
+void execute_button()
+{
+    int r, g, b;
+    r = 200;
+    g = 200;
+    b = 200;
+    btn_change->BorderColor = RGB(r, g, b);
+    btn_change->TextColor = RGB(r - 30, g - 50, b - 70);
+    btn_change->Caption = L"Кнопочка горит";
+    MessageBoxW(NULL, L"Сделаем этот мир ярче", L"Кнопочка", 0);
+}
+
+void ExecuteMyButton(ObjectButton* btn, HDC Canvas)
+{
+    if (btn->help_button_first_draw_status == 0)
+    {
+        btn->Left = btn->Left - 8;
+        btn->Top = btn->Top - 51;
+        btn->Create(Form1, Canvas);
+        btn->Left = btn->Left + 8;
+        btn->Top = btn->Top + 51;
+    }
+}
+
+void ExitFromProgram()
+{
+    MessageBoxW(NULL, L"Будет произведён выход из приложения", L"Выход", 0);
+    PostQuitMessage(1);
+}
+
+void MessAnna()
+{
+    MessageBoxW(NULL, L"Миронович Анна Олеговна \n Год рождения: 27.08.2007 \n Город рождения: Вильнус \n Супер Сила: делать 10 задач параллельно", L"Информация о студенте", 0);
+}
+
+void MessDaria()
+{
+    MessageBoxW(NULL, L"Малышева Дарья Андреевна \n Год рождения: 12.10.2007 \n Город рождения: Златоуст \n Супер Сила: очаровывать всех и вся", L"Информация о студенте", 0);
+}
+
+void MessVictoria()
+{
+    MessageBoxW(NULL, L"Герман Виктория Викторовна \n Год рождения: 9.11.2007 \n Город рождения: Краснодар \n Супер Сила: хакнет даже чайник", L"Информация о студенте", 0);
+}
+
+// Функция для отображения информации о выбранном боссе
+void ShowBossInfo()
+{
+    if (selectedBoss.name.empty())
+    {
+        MessageBoxW(NULL, L"Вы ещё не выбрали босса!", L"Предупреждение", MB_OK | MB_ICONWARNING);
+        return;
+    }
+    
+    wstring message = L"Выбран босс: " + selectedBoss.name + L"\n";
+    message += L"Испытание: " + selectedBoss.title + L"\n";
+    message += L"Описание: " + selectedBoss.description;
+    
+    MessageBoxW(NULL, message.c_str(), L"Информация о боссе", MB_OK | MB_ICONINFORMATION);
+}
+
+// Диалоговое окно выбора босса
+INT_PTR CALLBACK BossSelectionProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_INITDIALOG:
+    {
+        SetWindowTextW(hDlg, L"Выберите босса");
+        RECT rc;
+        GetWindowRect(hDlg, &rc);
+        int x = (GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2;
+        int y = (GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2;
+        SetWindowPos(hDlg, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        return (INT_PTR)TRUE;
+    }
+    case WM_COMMAND:
+    {
+        switch (LOWORD(wParam))
+        {
+        case 1001:
+        {
+            selectedBoss.name = L"Попов";
+            selectedBoss.title = L"Испытание \"Башня полиморфизма\"";
+            selectedBoss.description = L"Вам предстоит пройти через 10 уровней полиморфизма,\n"
+                                       L"где каждый шаг требует переопределения методов\n"
+                                       L"и понимания виртуальных функций.";
+            selectedBoss.color = RGB(255, 100, 100);
+            MessageBoxW(NULL, L"Вы выбрали босса: Попов!\nИспытание: Башня полиморфизма", 
+                      L"Выбор босса", MB_OK | MB_ICONINFORMATION);
+            EndDialog(hDlg, IDOK);
+            break;
+        }
+        case 1002:
+        {
+            selectedBoss.name = L"Алейников";
+            selectedBoss.title = L"Спецоперация: Astra";
+            selectedBoss.description = L"Секретная миссия по внедрению в систему Astra.\n"
+                                       L"Требуется найти уязвимости и обойти защиту\n"
+                                       L"на всех этапах спецоперации.";
+            selectedBoss.color = RGB(100, 255, 100);
+            MessageBoxW(NULL, L"Вы выбрали босса: Алейников!\nИспытание: Спецоперация: Astra", 
+                      L"Выбор босса", MB_OK | MB_ICONINFORMATION);
+            EndDialog(hDlg, IDOK);
+            break;
+        }
+        case 1003:
+        {
+            selectedBoss.name = L"Корнеев";
+            selectedBoss.title = L"Ядро GreenData";
+            selectedBoss.description = L"Необходимо проникнуть в защищённое ядро GreenData.\n"
+                                       L"Зашифрованные данные, сложные алгоритмы\n"
+                                       L"и многоуровневая система защиты ждут вас.";
+            selectedBoss.color = RGB(100, 100, 255);
+            MessageBoxW(NULL, L"Вы выбрали босса: Корнеев!\nИспытание: Ядро GreenData", 
+                      L"Выбор босса", MB_OK | MB_ICONINFORMATION);
+            EndDialog(hDlg, IDOK);
+            break;
+        }
+        case IDCANCEL:
+            EndDialog(hDlg, IDCANCEL);
+            break;
+        }
+        break;
+    }
+    }
+    return (INT_PTR)FALSE;
+}
+
+// Функция для открытия диалога выбора босса
+void OpenBossSelection()
+{
+    DialogBoxW(hInst, MAKEINTRESOURCEW(IDD_ABOUTBOX), Form1, BossSelectionProc);
+}
+
+// Общая функция для выбора участника
+void SelectParticipant()
+{
+    int result = MessageBoxW(NULL, 
+        L"Выберите участника:\n\nДа - Анна\nНет - Дарья\nОтмена - Виктория",
+        L"Выбор участника", 
+        MB_YESNOCANCEL | MB_ICONQUESTION);
+    
+    switch(result)
+    {
+    case IDYES:
+        MessAnna();
+        break;
+    case IDNO:
+        MessDaria();
+        break;
+    case IDCANCEL:
+        MessVictoria();
+        break;
+    }
+}
+
+WCHAR szTitle[MAX_LOADSTRING];
+WCHAR szWindowClass[MAX_LOADSTRING];
+
+ATOM MyRegisterClass(HINSTANCE hInstance);
+BOOL InitInstance(HINSTANCE, int);
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+
+int WINAPI wWinMain(_In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR lpCmdLine,
+    _In_ int nCmdShow)
+{
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+    
+    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_ZAEB, szWindowClass, MAX_LOADSTRING);
+    MyRegisterClass(hInstance);
+    
+    if (!InitInstance(hInstance, nCmdShow))
+    {
+        return false;
+    }
+    
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_ZAEB));
+    MSG msg;
+    
+    while (GetMessage(&msg, nullptr, 0, 0))
+    {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    return (int)msg.wParam;
+}
+
+ATOM MyRegisterClass(HINSTANCE hInstance)
+{
+    WNDCLASSEXW wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndProc;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ZAEB));
+    wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground = CreateSolidBrush(RGB(16, 30, 161));
+    wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_ZAEB);
+    wcex.lpszClassName = szWindowClass;
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    return RegisterClassExW(&wcex);
+}
+
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+    hInst = hInstance;
+    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+    
+    if (!hWnd)
+    {
+        return false;
+    }
+    
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
+    return true;
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    Form1 = hWnd;
+    switch (message)
+    {
+    case WM_COMMAND:
+    {
+        int wmId = LOWORD(wParam);
+        switch (wmId)
+        {
+        case IDM_ABOUT:
+            DialogBoxW(hInst, MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, About);
+            break;
+        case IDM_EXIT:
+            DestroyWindow(hWnd);
+            break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    }
+    break;
+    
+    case WM_CREATE:
+    {
+        execute_application_postion_and_size(Form1, 900, 500);
+        
+        lbl_text_hello->Caption = L"Приветствуем в Тёмном Царстве! \n ГЛАВНОЕ МЕНЮ";
+        lbl_text_hello->cfg_enable_border = 0;
+        lbl_text_hello->cfg_text_size = 48;
+        lbl_text_hello->TextColor = RGB(0, 0, 0);
+        
+        btn_hide->Caption = L"҉*\\( ‘ ω ’ )/*҉";
+        
+        lbl_text_hide_button->Caption = L"<- Нажмите Tab для скрытия кнопки и W, чтобы снова ее показать";
+        lbl_text_hide_button->cfg_enable_border = 0;
+        lbl_text_hide_button->cfg_text_size = 24;
+        lbl_text_hide_button->TextColor = RGB(0, 190, 231);
+        
+        btn_change->ButtonClick = &execute_button;
+        btn_change->Caption = L"Цветастая кнопочка";
+        
+        btn_select_participant->ButtonClick = &SelectParticipant;
+        btn_select_participant->Caption = L"Выберите участника";
+        btn_select_participant->TextColor = RGB(255, 200, 0);
+        btn_select_participant->BorderColor = RGB(255, 200, 0);
+        btn_select_participant->BackColor = RGB(50, 50, 80);
+        
+        btn_select_boss->ButtonClick = &OpenBossSelection;
+        btn_select_boss->Caption = L"Выберите босса";
+        btn_select_boss->TextColor = RGB(255, 100, 0);
+        btn_select_boss->BorderColor = RGB(255, 100, 0);
+        btn_select_boss->BackColor = RGB(80, 40, 40);
+        
+        btn_exit->Caption = L"Выход";
+        btn_exit->TextColor = RGB(255, 52, 9);
+        btn_exit->BorderColor = RGB(255, 52, 9);
+        btn_exit->ButtonClick = &ExitFromProgram;
+        
+        selectedBoss.name = L"";
+    }
+    break;
+    
+    case WM_KEYDOWN:
+    {
+        if (wParam == VK_TAB)
+        {
+            btn_hide->ClearButtonDraw(Form1);
+        }
+        if (0x57 & GetAsyncKeyState(0x51))
+        {
+            HDC hdc = GetWindowDC(Form1);
+            btn_hide->help_button_active_status = 1;
+            btn_hide->ActiveButtonAnimate(Form1, hdc);
+        }
+    }
+    break;
+    
+    case WM_MOUSEMOVE:
+    {
+        HDC hdc = GetWindowDC(Form1);
+        btn_change->ActiveButtonAnimate(Form1, hdc);
+        btn_exit->ActiveButtonAnimate(Form1, hdc);
+        btn_select_participant->ActiveButtonAnimate(Form1, hdc);
+        btn_select_boss->ActiveButtonAnimate(Form1, hdc);
+    }
+    break;
+    
+    case WM_LBUTTONDOWN:
+    {
+        btn_change->CheckMouseCoordinatesBeforeStartClickFunction(Form1);
+        btn_exit->CheckMouseCoordinatesBeforeStartClickFunction(Form1);
+        btn_select_participant->CheckMouseCoordinatesBeforeStartClickFunction(Form1);
+        btn_select_boss->CheckMouseCoordinatesBeforeStartClickFunction(Form1);
+    }
+    break;
+    
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        
+        if (lbl_text_hello->help_button_first_draw_status == 0)
+        {
+            lbl_text_hello->Left = lbl_text_hello->Left - 8;
+            lbl_text_hello->Top = lbl_text_hello->Top - 51;
+            lbl_text_hello->Create(Form1, hdc);
+            lbl_text_hello->Left = lbl_text_hello->Left + 8;
+            lbl_text_hello->Top = lbl_text_hello->Top + 51;
+        }
+        
+        ExecuteMyButton(btn_change, hdc);
+        ExecuteMyButton(lbl_text_hello, hdc);
+        ExecuteMyButton(lbl_text_hide_button, hdc);
+        ExecuteMyButton(btn_exit, hdc);
+        ExecuteMyButton(btn_hide, hdc);
+        ExecuteMyButton(btn_select_participant, hdc);
+        ExecuteMyButton(btn_select_boss, hdc);
+        
+        EndPaint(hWnd, &ps);
+    }
+    break;
+    
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+        
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        return (INT_PTR)TRUE;
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+        {
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+        }
+        break;
+    }
+    return (INT_PTR)FALSE;
+}
