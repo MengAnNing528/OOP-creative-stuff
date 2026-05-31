@@ -1,0 +1,142 @@
+#include "framework.h"
+#include "windows.h"
+#include "winuser.h"
+#include <string>
+#include <vector>
+using namespace std;
+
+// Структура для хранения информации о боссе
+struct BossInfo {
+    wstring name;
+    wstring title;
+    wstring description;
+    COLORREF color;
+};
+
+class ObjectButton
+{
+public:
+    int Left, Top, Width, Height;
+    COLORREF BorderColor;
+    COLORREF BackColor;
+    COLORREF TextColor;
+    const wchar_t* Caption;
+    void(*ButtonClick)();
+    int cfg_enable_border;
+    int cfg_text_size;
+    int help_button_first_draw_status;
+    int help_button_active_status;
+    
+    ObjectButton(int width, int height, int left, int top)
+    {
+        Width = width;
+        Height = height;
+        Left = left;
+        Top = top;
+        BorderColor = RGB(0, 0, 0);
+        BackColor = RGB(240, 240, 240);
+        TextColor = RGB(0, 0, 0);
+        Caption = L"";
+        ButtonClick = nullptr;
+        cfg_enable_border = 1;
+        cfg_text_size = 16;
+        help_button_first_draw_status = 0;
+        help_button_active_status = 0;
+    }
+    
+    void Create(HWND hWnd, HDC hdc)
+    {
+        DrawButton(hdc);
+        help_button_first_draw_status = 1;
+    }
+    
+    void DrawButton(HDC hdc)
+    {
+        HBRUSH brush = CreateSolidBrush(BackColor);
+        HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+        
+        HPEN pen = CreatePen(PS_SOLID, cfg_enable_border ? 2 : 0, BorderColor);
+        HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+        
+        Rectangle(hdc, Left, Top, Left + Width, Top + Height);
+        
+        SelectObject(hdc, oldBrush);
+        SelectObject(hdc, oldPen);
+        DeleteObject(brush);
+        DeleteObject(pen);
+        
+        if (Caption && wcslen(Caption) > 0)
+        {
+            HFONT font = CreateFontW(cfg_text_size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                    DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial");
+            HFONT oldFont = (HFONT)SelectObject(hdc, font);
+            DrawButtonText(hdc, Caption, TextColor);
+            SelectObject(hdc, oldFont);
+            DeleteObject(font);
+        }
+    }
+    
+    void DrawButtonText(HDC hdc, const wchar_t* text, COLORREF color)
+    {
+        SetTextColor(hdc, color);
+        SetBkMode(hdc, TRANSPARENT);
+        
+        SIZE help_text_size;
+        GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &help_text_size);
+        
+        int X = (Width - help_text_size.cx) / 2;
+        int y = (Height - help_text_size.cy) / 2;
+        
+        TextOutW(hdc, Left + X, Top + y, text, (int)wcslen(text));
+    }
+    
+    void ClearButtonDraw(HWND hWnd)
+    {
+        HDC hdc = GetWindowDC(hWnd);
+        RECT rect = {Left, Top, Left + Width, Top + Height};
+        HBRUSH brush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
+        FillRect(hdc, &rect, brush);
+        DeleteObject(brush);
+        ReleaseDC(hWnd, hdc);
+    }
+    
+    void ActiveButtonAnimate(HWND hWnd, HDC hdc)
+    {
+        POINT pt;
+        GetCursorPos(&pt);
+        ScreenToClient(hWnd, &pt);
+        
+        if (pt.x >= Left && pt.x <= Left + Width && pt.y >= Top && pt.y <= Top + Height)
+        {
+            if (help_button_active_status == 0)
+            {
+                help_button_active_status = 1;
+                DrawButton(hdc);
+            }
+        }
+        else
+        {
+            if (help_button_active_status == 1)
+            {
+                help_button_active_status = 0;
+                DrawButton(hdc);
+            }
+        }
+    }
+    
+    void CheckMouseCoordinatesBeforeStartClickFunction(HWND hWnd)
+    {
+        POINT pt;
+        GetCursorPos(&pt);
+        ScreenToClient(hWnd, &pt);
+        
+        if (pt.x >= Left && pt.x <= Left + Width && pt.y >= Top && pt.y <= Top + Height)
+        {
+            if (ButtonClick != nullptr)
+            {
+                ButtonClick();
+            }
+        }
+    }
+};
