@@ -1,0 +1,218 @@
+#define UNICODE
+#define _UNICODE
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+#include <string>
+
+#define BG_COLOR RGB(30, 30, 40)
+#define PANEL_COLOR RGB(45, 45, 55)
+#define BORDER_COLOR RGB(100, 100, 120)
+#define TEXT_COLOR RGB(220, 220, 230)
+#define TITLE_COLOR RGB(255, 200, 50)
+
+class MyButton {
+public:
+    int x, y, w, h;
+    COLORREF normal, hover, click;
+    LPCWSTR text;
+    void (*action)();
+    bool clicked;
+    
+    MyButton(int _x, int _y, int _w, int _h, LPCWSTR _t, COLORREF _n, COLORREF _hv, COLORREF _c, void (*a)()) {
+        x = _x; y = _y; w = _w; h = _h; text = _t; normal = _n; hover = _hv; click = _c; action = a; clicked = false;
+    }
+    
+    void Draw(HDC dc, bool over) {
+        COLORREF col = over ? (clicked ? click : hover) : normal;
+        HBRUSH br = CreateSolidBrush(col);
+        HPEN pen = CreatePen(PS_SOLID, 2, BORDER_COLOR);
+        SelectObject(dc, br);
+        SelectObject(dc, pen);
+        Rectangle(dc, x, y, x + w, y + h);
+        DeleteObject(br);
+        DeleteObject(pen);
+        
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, RGB(255,255,200));
+        HFONT font = CreateFont(18,0,0,0,FW_BOLD,0,0,0,DEFAULT_CHARSET,0,0,0,0,L"Segoe UI");
+        SelectObject(dc, font);
+        SIZE sz;
+        GetTextExtentPoint32W(dc, text, wcslen(text), &sz);
+        TextOutW(dc, x + (w - sz.cx)/2, y + (h - sz.cy)/2, text, wcslen(text));
+        DeleteObject(font);
+    }
+    
+    bool Check(int mx, int my) {
+        if(mx >= x && mx <= x+w && my >= y && my <= y+h) {
+            if(action) action();
+            return true;
+        }
+        return false;
+    }
+};
+
+HWND mainWnd = NULL;
+MyButton* btns[10];
+int btnCount = 0;
+LPCWSTR currentInfo = L"";
+bool showInfo = false;
+int optLevel = 0;
+
+void ShowAnna() { currentInfo = L"Анна Миронович\nГод: 27.08.2007\nГород: Вильнус\nСила: 10 задач сразу"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowDaria() { currentInfo = L"Дарья Малышева\nГод: 12.10.2007\nГород: Златоуст\nСила: очарование"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowVictoria() { currentInfo = L"Виктория Герман\nГод: 9.11.2007\nГород: Краснодар\nСила: хакер"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowPopov() { currentInfo = L"Захват Башни полиморфизма"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowAleynikov() { currentInfo = L"Спецоперация: Astra\nСтрогий контроль доступа"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowKorneev() { currentInfo = L"Ядро GreenData\nТвердыня реестра"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowOptions() { optLevel = (optLevel+1)%4; 
+    switch(optLevel) {
+        case 0: currentInfo = L"Режим: Обычный"; break;
+        case 1: currentInfo = L"Режим: Хардкор"; break;
+        case 2: currentInfo = L"Режим: Безумие"; break;
+        case 3: currentInfo = L"Режим: GOD MODE"; break;
+    }
+    showInfo = true; InvalidateRect(mainWnd, NULL, TRUE);
+}
+void EscapeGame() { if(MessageBoxW(mainWnd, L"Сбежать? Сессия не сдана!", L"Выход", MB_YESNO) == IDYES) PostQuitMessage(0); }
+
+void DrawText(HDC dc, int x, int y, LPCWSTR txt, int sz, COLORREF col) {
+    HFONT font = CreateFont(sz,0,0,0,FW_BOLD,0,0,0,DEFAULT_CHARSET,0,0,0,0,L"Segoe UI");
+    SelectObject(dc, font);
+    SetTextColor(dc, col);
+    SetBkMode(dc, TRANSPARENT);
+    TextOutW(dc, x, y, txt, wcslen(txt));
+    DeleteObject(font);
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
+    switch(msg) {
+        case WM_CREATE: {
+            btns[btnCount++] = new MyButton(50, 150, 180, 45, L"Анна", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowAnna);
+            btns[btnCount++] = new MyButton(250, 150, 180, 45, L"Дарья", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowDaria);
+            btns[btnCount++] = new MyButton(450, 150, 180, 45, L"Виктория", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowVictoria);
+            
+            btns[btnCount++] = new MyButton(50, 310, 180, 45, L"Попов А.А.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowPopov);
+            btns[btnCount++] = new MyButton(250, 310, 180, 45, L"Алейников В.В.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowAleynikov);
+            btns[btnCount++] = new MyButton(450, 310, 180, 45, L"Корнеев Д.Г.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowKorneev);
+            
+            btns[btnCount++] = new MyButton(250, 470, 130, 40, L"ОПЦИИ", RGB(50,80,100), RGB(80,80,110), RGB(100,100,140), ShowOptions);
+            btns[btnCount++] = new MyButton(420, 470, 130, 40, L"СБЕЖАТЬ", RGB(100,50,50), RGB(180,0,0), RGB(100,100,140), EscapeGame);
+            break;
+        }
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC dc = BeginPaint(hWnd, &ps);
+            
+            HBRUSH bg = CreateSolidBrush(BG_COLOR);
+            FillRect(dc, &ps.rcPaint, bg);
+            DeleteObject(bg);
+            
+            DrawText(dc, 350, 20, L"СЕССИЯ", 70, TITLE_COLOR);
+            DrawText(dc, 50, 110, L"ВЫБЕРИТЕ УЧАСТНИКА", 22, TEXT_COLOR);
+            DrawText(dc, 50, 270, L"ВЫБЕРИТЕ БОССА", 22, TEXT_COLOR);
+            
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            
+            for(int i = 0; i < btnCount; i++) {
+                bool over = (pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h);
+                btns[i]->Draw(dc, over);
+            }
+            
+            HBRUSH panel = CreateSolidBrush(PANEL_COLOR);
+            HPEN border = CreatePen(PS_SOLID, 2, BORDER_COLOR);
+            SelectObject(dc, panel);
+            SelectObject(dc, border);
+            Rectangle(dc, 650, 110, 880, 500);
+            DeleteObject(panel);
+            DeleteObject(border);
+            
+            if(showInfo && wcslen(currentInfo) > 0) {
+                HFONT font = CreateFont(16,0,0,0,FW_NORMAL,0,0,0,DEFAULT_CHARSET,0,0,0,0,L"Segoe UI");
+                SelectObject(dc, font);
+                SetTextColor(dc, TEXT_COLOR);
+                
+                std::wstring txt = currentInfo;
+                size_t p = 0;
+                int lineY = 140;
+                while((p = txt.find(L'\n')) != std::wstring::npos) {
+                    std::wstring line = txt.substr(0, p);
+                    TextOutW(dc, 670, lineY, line.c_str(), line.length());
+                    lineY += 28;
+                    txt.erase(0, p+1);
+                }
+                TextOutW(dc, 670, lineY, txt.c_str(), txt.length());
+                DeleteObject(font);
+            }
+            
+            DrawText(dc, 700, 530, L"Copyright MoJang AB", 12, RGB(80,80,100));
+            
+            EndPaint(hWnd, &ps);
+            break;
+        }
+        case WM_LBUTTONDOWN: {
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            for(int i = 0; i < btnCount; i++) {
+                if(pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h) {
+                    btns[i]->clicked = true;
+                    InvalidateRect(hWnd, NULL, TRUE);
+                    break;
+                }
+            }
+            break;
+        }
+        case WM_LBUTTONUP: {
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            for(int i = 0; i < btnCount; i++) {
+                if(pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h) {
+                    btns[i]->Check(pt.x, pt.y);
+                }
+                btns[i]->clicked = false;
+            }
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        }
+        case WM_MOUSEMOVE:
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case WM_DESTROY:
+            for(int i = 0; i < btnCount; i++) delete btns[i];
+            PostQuitMessage(0);
+            break;
+        default:
+            return DefWindowProc(hWnd, msg, wp, lp);
+    }
+    return 0;
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmd, int show) {
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInst;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(BG_COLOR);
+    wc.lpszClassName = L"MyGame";
+    RegisterClassExW(&wc);
+    
+    mainWnd = CreateWindowExW(0, L"MyGame", L"Сессия - Игра", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, 0, 920, 600, NULL, NULL, hInst, NULL);
+    
+    if(!mainWnd) return FALSE;
+    ShowWindow(mainWnd, show);
+    UpdateWindow(mainWnd);
+    
+    MSG msg;
+    while(GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return msg.wParam;
+}
