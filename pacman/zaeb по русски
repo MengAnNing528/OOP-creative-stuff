@@ -1,0 +1,610 @@
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+#include <string>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+
+// ====================== КОНСТАНТЫ PACMAN ======================
+const int CELL_SIZE = 30;
+const int MAP_WIDTH = 19;
+const int MAP_HEIGHT = 21;
+const int WINDOW_WIDTH = MAP_WIDTH * CELL_SIZE;
+const int WINDOW_HEIGHT = MAP_HEIGHT * CELL_SIZE + 60;
+const int GHOST_COUNT = 4;
+
+enum Direction { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, DIR_NONE };
+
+// Карта лабиринта
+int map[MAP_HEIGHT][MAP_WIDTH] = {
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1},
+    {1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1},
+    {1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1},
+    {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
+    {1,2,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,2,1},
+    {1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1},
+    {1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1},
+    {0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0},
+    {0,0,0,1,2,1,0,1,1,0,1,1,0,1,2,1,0,0,0},
+    {0,0,0,1,2,0,0,1,0,0,0,1,0,0,2,1,0,0,0},
+    {0,0,0,1,2,1,0,1,1,1,1,1,0,1,2,1,0,0,0},
+    {0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0},
+    {1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1},
+    {1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1},
+    {1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1},
+    {1,2,2,2,2,1,2,2,2,2,2,2,2,1,2,2,2,2,1},
+    {1,1,2,1,2,1,1,1,2,1,2,1,1,1,2,1,2,1,1},
+    {1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1},
+    {1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1},
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+};
+
+int originalMap[MAP_HEIGHT][MAP_WIDTH];
+bool gameRunning = false;
+int score = 0;
+
+// ====================== КЛАССЫ PACMAN ======================
+class GameObject {
+public:
+    int x, y;
+    Direction dir;
+    GameObject(int startX, int startY) : x(startX), y(startY), dir(DIR_NONE) {}
+    virtual void draw(HDC hdc) = 0;
+    virtual void update() = 0;
+};
+
+class PacMan : public GameObject {
+private:
+    int mouthAngle;
+    bool opening;
+    int animationCounter;
+public:
+    int lives;
+    PacMan(int startX, int startY) : GameObject(startX, startY), lives(3) {
+        mouthAngle = 45; opening = true; animationCounter = 0; dir = DIR_RIGHT;
+    }
+    void draw(HDC hdc) override {
+        int centerX = x * CELL_SIZE + CELL_SIZE / 2;
+        int centerY = y * CELL_SIZE + CELL_SIZE / 2;
+        int radius = CELL_SIZE / 2 - 2;
+        if (animationCounter++ > 3) {
+            if (opening) { mouthAngle += 15; if (mouthAngle >= 75) opening = false; }
+            else { mouthAngle -= 15; if (mouthAngle <= 15) opening = true; }
+            animationCounter = 0;
+        }
+        double startAngle = 0, endAngle = 0;
+        int angleOffset = mouthAngle;
+        switch (dir) {
+            case DIR_RIGHT: startAngle = -angleOffset; endAngle = angleOffset; break;
+            case DIR_LEFT: startAngle = 180 - angleOffset; endAngle = 180 + angleOffset; break;
+            case DIR_UP: startAngle = -90 - angleOffset; endAngle = -90 + angleOffset; break;
+            case DIR_DOWN: startAngle = 90 - angleOffset; endAngle = 90 + angleOffset; break;
+            default: startAngle = -angleOffset; endAngle = angleOffset;
+        }
+        HBRUSH brush = CreateSolidBrush(RGB(255, 255, 0));
+        HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+        HPEN pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 0));
+        HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+        Pie(hdc, centerX - radius, centerY - radius, centerX + radius, centerY + radius,
+            centerX + (int)(radius * cos(startAngle * 3.14159 / 180)),
+            centerY + (int)(radius * sin(startAngle * 3.14159 / 180)),
+            centerX + (int)(radius * cos(endAngle * 3.14159 / 180)),
+            centerY + (int)(radius * sin(endAngle * 3.14159 / 180)));
+        SelectObject(hdc, oldPen); DeleteObject(pen);
+        SelectObject(hdc, oldBrush); DeleteObject(brush);
+        int eyeX = centerX, eyeY = centerY;
+        switch (dir) {
+            case DIR_RIGHT: eyeX += 5; eyeY -= 5; break;
+            case DIR_LEFT: eyeX -= 5; eyeY -= 5; break;
+            case DIR_UP: eyeX -= 3; eyeY -= 8; break;
+            case DIR_DOWN: eyeX -= 3; eyeY -= 2; break;
+        }
+        brush = CreateSolidBrush(RGB(0, 0, 0));
+        SelectObject(hdc, brush);
+        Ellipse(hdc, eyeX - 3, eyeY - 3, eyeX + 2, eyeY + 2);
+        SelectObject(hdc, oldBrush); DeleteObject(brush);
+    }
+    void update() override {
+        int newX = x, newY = y;
+        switch (dir) {
+            case DIR_UP: newY--; break;
+            case DIR_DOWN: newY++; break;
+            case DIR_LEFT: newX--; break;
+            case DIR_RIGHT: newX++; break;
+        }
+        if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1) {
+            x = newX; y = newY;
+            if (map[y][x] == 2) map[y][x] = 0;
+        }
+    }
+    bool canMove(Direction newDir) {
+        int newX = x, newY = y;
+        switch (newDir) {
+            case DIR_UP: newY--; break;
+            case DIR_DOWN: newY++; break;
+            case DIR_LEFT: newX--; break;
+            case DIR_RIGHT: newX++; break;
+        }
+        return (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1);
+    }
+    void resetAnimation() { mouthAngle = 45; opening = true; animationCounter = 0; }
+};
+
+class Ghost : public GameObject {
+private:
+    COLORREF color;
+    int moveCounter;
+    bool canSeePlayer(int playerX, int playerY) { return abs(x - playerX) + abs(y - playerY) <= 10; }
+    Direction getDirectionToPlayer(int playerX, int playerY) {
+        std::vector<Direction> possibleDirs;
+        Direction dirs[] = { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT };
+        int dx[] = { 0, 0, -1, 1 }, dy[] = { -1, 1, 0, 0 };
+        for (int i = 0; i < 4; i++) {
+            int newX = x + dx[i], newY = y + dy[i];
+            if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1)
+                possibleDirs.push_back(dirs[i]);
+        }
+        if (possibleDirs.empty()) return DIR_NONE;
+        int bestDist = 9999;
+        Direction bestDir = possibleDirs[0];
+        for (Direction d : possibleDirs) {
+            int newX = x, newY = y;
+            switch (d) {
+                case DIR_UP: newY--; break; case DIR_DOWN: newY++; break;
+                case DIR_LEFT: newX--; break; case DIR_RIGHT: newX++; break;
+            }
+            int dist = abs(newX - playerX) + abs(newY - playerY);
+            if (dist < bestDist) { bestDist = dist; bestDir = d; }
+        }
+        return bestDir;
+    }
+public:
+    Ghost(int startX, int startY, COLORREF ghostColor) : GameObject(startX, startY), color(ghostColor) { moveCounter = 0; }
+    void draw(HDC hdc) override {
+        int centerX = x * CELL_SIZE + CELL_SIZE / 2;
+        int centerY = y * CELL_SIZE + CELL_SIZE / 2;
+        int radius = CELL_SIZE / 2 - 2;
+        HBRUSH brush = CreateSolidBrush(color);
+        HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+        Ellipse(hdc, centerX - radius, centerY - radius + 5, centerX + radius, centerY + radius);
+        for (int i = -2; i <= 2; i++) Ellipse(hdc, centerX + i * 8, centerY + radius - 5, centerX + i * 8 + 6, centerY + radius + 5);
+        SelectObject(hdc, oldBrush); DeleteObject(brush);
+        brush = CreateSolidBrush(RGB(255, 255, 255));
+        SelectObject(hdc, brush);
+        Ellipse(hdc, centerX - 10, centerY - 5, centerX - 4, centerY + 1);
+        Ellipse(hdc, centerX + 4, centerY - 5, centerX + 10, centerY + 1);
+        SelectObject(hdc, oldBrush); DeleteObject(brush);
+        brush = CreateSolidBrush(RGB(0, 0, 255));
+        SelectObject(hdc, brush);
+        if (dir == DIR_RIGHT || dir == DIR_NONE) {
+            Ellipse(hdc, centerX - 5, centerY - 4, centerX - 1, centerY);
+            Ellipse(hdc, centerX + 5, centerY - 4, centerX + 9, centerY);
+        } else if (dir == DIR_LEFT) {
+            Ellipse(hdc, centerX - 9, centerY - 4, centerX - 5, centerY);
+            Ellipse(hdc, centerX + 1, centerY - 4, centerX + 5, centerY);
+        } else {
+            Ellipse(hdc, centerX - 8, centerY - 6, centerX - 4, centerY - 2);
+            Ellipse(hdc, centerX + 4, centerY - 6, centerX + 8, centerY - 2);
+        }
+        SelectObject(hdc, oldBrush); DeleteObject(brush);
+    }
+    void update() override {
+        extern PacMan* pacman;
+        if (moveCounter++ < 15) return;
+        moveCounter = 0;
+        if (canSeePlayer(pacman->x, pacman->y)) {
+            Direction chaseDir = getDirectionToPlayer(pacman->x, pacman->y);
+            if (chaseDir != DIR_NONE) {
+                int newX = x, newY = y;
+                switch (chaseDir) {
+                    case DIR_UP: newY--; break; case DIR_DOWN: newY++; break;
+                    case DIR_LEFT: newX--; break; case DIR_RIGHT: newX++; break;
+                }
+                if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1) {
+                    x = newX; y = newY; dir = chaseDir; return;
+                }
+            }
+        }
+        std::vector<Direction> availableDirs;
+        Direction dirs[] = { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT };
+        for (int i = 0; i < 4; i++) {
+            int newX = x, newY = y;
+            switch (dirs[i]) {
+                case DIR_UP: newY--; break; case DIR_DOWN: newY++; break;
+                case DIR_LEFT: newX--; break; case DIR_RIGHT: newX++; break;
+            }
+            if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1) {
+                if (availableDirs.size() > 1 && ((dir == DIR_UP && dirs[i] == DIR_DOWN) ||
+                    (dir == DIR_DOWN && dirs[i] == DIR_UP) ||
+                    (dir == DIR_LEFT && dirs[i] == DIR_RIGHT) ||
+                    (dir == DIR_RIGHT && dirs[i] == DIR_LEFT))) continue;
+                availableDirs.push_back(dirs[i]);
+            }
+        }
+        if (!availableDirs.empty()) {
+            Direction newDir = availableDirs[rand() % availableDirs.size()];
+            int newX = x, newY = y;
+            switch (newDir) {
+                case DIR_UP: newY--; break; case DIR_DOWN: newY++; break;
+                case DIR_LEFT: newX--; break; case DIR_RIGHT: newX++; break;
+            }
+            if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT && map[newY][newX] != 1) {
+                x = newX; y = newY; dir = newDir;
+            }
+        }
+    }
+};
+
+PacMan* pacman;
+Ghost* ghosts[GHOST_COUNT];
+
+// ====================== ФУНКЦИИ PACMAN ======================
+void SaveOriginalMap() {
+    for (int i = 0; i < MAP_HEIGHT; i++)
+        for (int j = 0; j < MAP_WIDTH; j++)
+            originalMap[i][j] = map[i][j];
+}
+void ResetMap() {
+    for (int i = 0; i < MAP_HEIGHT; i++)
+        for (int j = 0; j < MAP_WIDTH; j++)
+            map[i][j] = originalMap[i][j];
+}
+void UpdateScore() {
+    int currentScore = 0;
+    for (int i = 0; i < MAP_HEIGHT; i++)
+        for (int j = 0; j < MAP_WIDTH; j++)
+            if (map[i][j] == 2) currentScore += 10;
+    score = 2440 - currentScore;
+}
+void ResetGame() {
+    ResetMap();
+    pacman->x = 9; pacman->y = 15; pacman->lives = 3; pacman->dir = DIR_RIGHT; pacman->resetAnimation();
+    ghosts[0]->x = 9; ghosts[0]->y = 11; ghosts[0]->dir = DIR_NONE;
+    ghosts[1]->x = 10; ghosts[1]->y = 11; ghosts[1]->dir = DIR_NONE;
+    ghosts[2]->x = 8; ghosts[2]->y = 11; ghosts[2]->dir = DIR_NONE;
+    ghosts[3]->x = 9; ghosts[3]->y = 10; ghosts[3]->dir = DIR_NONE;
+    UpdateScore();
+    gameRunning = true;
+}
+void CheckCollisions() {
+    for (int i = 0; i < GHOST_COUNT; i++) {
+        if (pacman->x == ghosts[i]->x && pacman->y == ghosts[i]->y) {
+            pacman->lives--;
+            if (pacman->lives <= 0) gameRunning = false;
+            else {
+                pacman->x = 9; pacman->y = 15; pacman->dir = DIR_RIGHT;
+                ghosts[0]->x = 9; ghosts[0]->y = 11; ghosts[1]->x = 10; ghosts[1]->y = 11;
+                ghosts[2]->x = 8; ghosts[2]->y = 11; ghosts[3]->x = 9; ghosts[3]->y = 10;
+            }
+            break;
+        }
+    }
+    int dotsLeft = 0;
+    for (int i = 0; i < MAP_HEIGHT; i++)
+        for (int j = 0; j < MAP_WIDTH; j++)
+            if (map[i][j] == 2) dotsLeft++;
+    if (dotsLeft == 0) gameRunning = false;
+}
+void DrawMap(HDC hdc) {
+    for (int i = 0; i < MAP_HEIGHT; i++) {
+        for (int j = 0; j < MAP_WIDTH; j++) {
+            int x = j * CELL_SIZE, y = i * CELL_SIZE;
+            if (map[i][j] == 1) {
+                HBRUSH brush = CreateSolidBrush(RGB(0, 0, 255));
+                HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+                Rectangle(hdc, x, y, x + CELL_SIZE, y + CELL_SIZE);
+                SelectObject(hdc, oldBrush); DeleteObject(brush);
+            } else if (map[i][j] == 2) {
+                HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
+                HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+                Ellipse(hdc, x + CELL_SIZE / 2 - 3, y + CELL_SIZE / 2 - 3, x + CELL_SIZE / 2 + 3, y + CELL_SIZE / 2 + 3);
+                SelectObject(hdc, oldBrush); DeleteObject(brush);
+            }
+        }
+    }
+}
+void DrawUI(HDC hdc) {
+    char buffer[100];
+    sprintf_s(buffer, sizeof(buffer), "Score: %d", score);
+    TextOutA(hdc, 10, WINDOW_HEIGHT - 50, buffer, (int)strlen(buffer));
+    sprintf_s(buffer, sizeof(buffer), "Lives: ");
+    TextOutA(hdc, 200, WINDOW_HEIGHT - 50, buffer, (int)strlen(buffer));
+    HBRUSH brush = CreateSolidBrush(RGB(255, 255, 0));
+    HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+    for (int i = 0; i < pacman->lives; i++) Ellipse(hdc, 260 + i * 30, WINDOW_HEIGHT - 60, 280 + i * 30, WINDOW_HEIGHT - 40);
+    SelectObject(hdc, oldBrush); DeleteObject(brush);
+}
+
+// ====================== ОКНО PACMAN ======================
+LRESULT CALLBACK GameWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_CREATE:
+        SetTimer(hwnd, 1, 50, NULL);
+        SaveOriginalMap();
+        pacman = new PacMan(9, 15);
+        ghosts[0] = new Ghost(9, 11, RGB(255, 0, 0));
+        ghosts[1] = new Ghost(10, 11, RGB(255, 184, 255));
+        ghosts[2] = new Ghost(8, 11, RGB(0, 255, 255));
+        ghosts[3] = new Ghost(9, 10, RGB(255, 184, 82));
+        ResetGame();
+        return 0;
+    case WM_TIMER:
+        if (gameRunning) {
+            pacman->update();
+            for (int i = 0; i < GHOST_COUNT; i++) ghosts[i]->update();
+            UpdateScore();
+            CheckCollisions();
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+        break;
+    case WM_KEYDOWN:
+        if (gameRunning) {
+            switch (wParam) {
+                case VK_UP: if (pacman->canMove(DIR_UP)) pacman->dir = DIR_UP; break;
+                case VK_DOWN: if (pacman->canMove(DIR_DOWN)) pacman->dir = DIR_DOWN; break;
+                case VK_LEFT: if (pacman->canMove(DIR_LEFT)) pacman->dir = DIR_LEFT; break;
+                case VK_RIGHT: if (pacman->canMove(DIR_RIGHT)) pacman->dir = DIR_RIGHT; break;
+                case VK_ESCAPE: DestroyWindow(hwnd); break;
+            }
+        }
+        break;
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        HDC hdcMem = CreateCompatibleDC(hdc);
+        HBITMAP hbmMem = CreateCompatibleBitmap(hdc, WINDOW_WIDTH, WINDOW_HEIGHT);
+        HGDIOBJ oldBitmap = SelectObject(hdcMem, hbmMem);
+        RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+        HBRUSH bgBrush = CreateSolidBrush(RGB(0, 0, 0));
+        FillRect(hdcMem, &rect, bgBrush);
+        DeleteObject(bgBrush);
+        DrawMap(hdcMem);
+        for (int i = 0; i < GHOST_COUNT; i++) ghosts[i]->draw(hdcMem);
+        pacman->draw(hdcMem);
+        DrawUI(hdcMem);
+        BitBlt(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, hdcMem, 0, 0, SRCCOPY);
+        SelectObject(hdcMem, oldBitmap);
+        DeleteDC(hdcMem);
+        DeleteObject(hbmMem);
+        EndPaint(hwnd, &ps);
+        break;
+    }
+    case WM_DESTROY:
+        KillTimer(hwnd, 1);
+        delete pacman;
+        for (int i = 0; i < GHOST_COUNT; i++) delete ghosts[i];
+        PostQuitMessage(0);
+        break;
+    }
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void LaunchPacman() {
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.lpfnWndProc = GameWndProc;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpszClassName = "GameWindow";
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    RegisterClassEx(&wc);
+    HWND hwndGame = CreateWindowEx(0, "GameWindow", "Pac-Man Game",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, WINDOW_WIDTH, WINDOW_HEIGHT,
+        NULL, NULL, GetModuleHandle(NULL), NULL);
+    ShowWindow(hwndGame, SW_SHOW);
+    UpdateWindow(hwndGame);
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+        if (!IsWindow(hwndGame)) break;
+    }
+}
+
+// ====================== ИНТЕРФЕЙС С КНОПКАМИ ======================
+#define BG_COLOR RGB(30, 30, 40)
+#define PANEL_COLOR RGB(45, 45, 55)
+#define BORDER_COLOR RGB(100, 100, 120)
+#define TEXT_COLOR RGB(220, 220, 230)
+#define TITLE_COLOR RGB(255, 200, 50)
+
+class MyButton {
+public:
+    int x, y, w, h;
+    COLORREF normal, hover, click;
+    const char* text;
+    void (*action)();
+    bool clicked;
+    
+    MyButton(int _x, int _y, int _w, int _h, const char* _t, COLORREF _n, COLORREF _hv, COLORREF _c, void (*a)()) {
+        x = _x; y = _y; w = _w; h = _h; text = _t; normal = _n; hover = _hv; click = _c; action = a; clicked = false;
+    }
+    
+    void Draw(HDC dc, bool over) {
+        COLORREF col = over ? (clicked ? click : hover) : normal;
+        HBRUSH br = CreateSolidBrush(col);
+        HPEN pen = CreatePen(PS_SOLID, 2, BORDER_COLOR);
+        SelectObject(dc, br);
+        SelectObject(dc, pen);
+        Rectangle(dc, x, y, x + w, y + h);
+        DeleteObject(br);
+        DeleteObject(pen);
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, RGB(255,255,200));
+        HFONT font = CreateFont(18,0,0,0,FW_BOLD,0,0,0,DEFAULT_CHARSET,0,0,0,0,"Segoe UI");
+        SelectObject(dc, font);
+        SIZE sz;
+        GetTextExtentPoint32A(dc, text, (int)strlen(text), &sz);
+        TextOutA(dc, x + (w - sz.cx)/2, y + (h - sz.cy)/2, text, (int)strlen(text));
+        DeleteObject(font);
+    }
+    
+    bool Check(int mx, int my) {
+        if(mx >= x && mx <= x+w && my >= y && my <= y+h) {
+            if(action) action();
+            return true;
+        }
+        return false;
+    }
+};
+
+HWND mainWnd = NULL;
+MyButton* btns[20];
+int btnCount = 0;
+const char* currentInfo = "";
+bool showInfo = false;
+int optLevel = 0;
+
+void ShowAnna() { currentInfo = "Анна Миронович\nГод: 27.08.2007\nГород: Вильнус\nСила: 10 задач сразу"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowDaria() { currentInfo = "Дарья Малышева\nГод: 12.10.2007\nГород: Златоуст\nСила: очарование"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowVictoria() { currentInfo = "Виктория Герман\nГод: 9.11.2007\nГород: Краснодар\nСила: хакер"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowPopov() { currentInfo = "Захват Башни полиморфизма"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowAleynikov() { currentInfo = "Спецоперация: Astra\nСтрогий контроль доступа"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowKorneev() { currentInfo = "Ядро GreenData\nТвердыня реестра"; showInfo = true; InvalidateRect(mainWnd, NULL, TRUE); }
+void ShowOptions() { optLevel = (optLevel+1)%4; 
+    switch(optLevel) {
+        case 0: currentInfo = "Режим: Обычный"; break;
+        case 1: currentInfo = "Режим: Хардкор"; break;
+        case 2: currentInfo = "Режим: Безумие"; break;
+        case 3: currentInfo = "Режим: GOD MODE"; break;
+    }
+    showInfo = true; InvalidateRect(mainWnd, NULL, TRUE);
+}
+void EscapeGame() { if(MessageBoxA(mainWnd, "Сбежать? Сессия не сдана!", "Выход", MB_YESNO) == IDYES) PostQuitMessage(0); }
+void StartPacman() { LaunchPacman(); }
+
+void DrawText(HDC dc, int x, int y, const char* txt, int sz, COLORREF col) {
+    HFONT font = CreateFont(sz,0,0,0,FW_BOLD,0,0,0,DEFAULT_CHARSET,0,0,0,0,"Segoe UI");
+    SelectObject(dc, font);
+    SetTextColor(dc, col);
+    SetBkMode(dc, TRANSPARENT);
+    TextOutA(dc, x, y, txt, (int)strlen(txt));
+    DeleteObject(font);
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
+    switch(msg) {
+        case WM_CREATE: {
+            btns[btnCount++] = new MyButton(50, 150, 180, 45, "Анна", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowAnna);
+            btns[btnCount++] = new MyButton(250, 150, 180, 45, "Дарья", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowDaria);
+            btns[btnCount++] = new MyButton(450, 150, 180, 45, "Виктория", RGB(60,60,80), RGB(80,80,110), RGB(100,100,140), ShowVictoria);
+            btns[btnCount++] = new MyButton(50, 310, 180, 45, "Попов А.А.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowPopov);
+            btns[btnCount++] = new MyButton(250, 310, 180, 45, "Алейников В.В.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowAleynikov);
+            btns[btnCount++] = new MyButton(450, 310, 180, 45, "Корнеев Д.Г.", RGB(139,0,0), RGB(180,0,0), RGB(100,100,140), ShowKorneev);
+            btns[btnCount++] = new MyButton(50, 470, 130, 40, "ОПЦИИ", RGB(50,80,100), RGB(80,80,110), RGB(100,100,140), ShowOptions);
+            btns[btnCount++] = new MyButton(200, 470, 130, 40, "СБЕЖАТЬ", RGB(100,50,50), RGB(180,0,0), RGB(100,100,140), EscapeGame);
+            btns[btnCount++] = new MyButton(680, 470, 200, 50, "СТАРТ PACMAN", RGB(0,100,0), RGB(0,150,0), RGB(0,200,0), StartPacman);
+            break;
+        }
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC dc = BeginPaint(hWnd, &ps);
+            HBRUSH bg = CreateSolidBrush(BG_COLOR);
+            FillRect(dc, &ps.rcPaint, bg);
+            DeleteObject(bg);
+            DrawText(dc, 350, 20, "СЕССИЯ", 70, TITLE_COLOR);
+            DrawText(dc, 50, 110, "ВЫБЕРИТЕ УЧАСТНИКА", 22, TEXT_COLOR);
+            DrawText(dc, 50, 270, "ВЫБЕРИТЕ БОССА", 22, TEXT_COLOR);
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            for(int i = 0; i < btnCount; i++) {
+                bool over = (pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h);
+                btns[i]->Draw(dc, over);
+            }
+            HBRUSH panel = CreateSolidBrush(PANEL_COLOR);
+            HPEN border = CreatePen(PS_SOLID, 2, BORDER_COLOR);
+            SelectObject(dc, panel);
+            SelectObject(dc, border);
+            Rectangle(dc, 650, 110, 880, 500);
+            DeleteObject(panel);
+            DeleteObject(border);
+            if(showInfo && strlen(currentInfo) > 0) {
+                HFONT font = CreateFont(16,0,0,0,FW_NORMAL,0,0,0,DEFAULT_CHARSET,0,0,0,0,"Segoe UI");
+                SelectObject(dc, font);
+                SetTextColor(dc, TEXT_COLOR);
+                std::string txt = currentInfo;
+                size_t p = 0;
+                int lineY = 140;
+                while((p = txt.find('\n')) != std::string::npos) {
+                    std::string line = txt.substr(0, p);
+                    TextOutA(dc, 670, lineY, line.c_str(), (int)line.length());
+                    lineY += 28;
+                    txt.erase(0, p+1);
+                }
+                TextOutA(dc, 670, lineY, txt.c_str(), (int)txt.length());
+                DeleteObject(font);
+            }
+            DrawText(dc, 700, 530, "Copyright MoJang AB", 12, RGB(80,80,100));
+            EndPaint(hWnd, &ps);
+            break;
+        }
+        case WM_LBUTTONDOWN: {
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            for(int i = 0; i < btnCount; i++) {
+                if(pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h) {
+                    btns[i]->clicked = true;
+                    InvalidateRect(hWnd, NULL, TRUE);
+                    break;
+                }
+            }
+            break;
+        }
+        case WM_LBUTTONUP: {
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hWnd, &pt);
+            for(int i = 0; i < btnCount; i++) {
+                if(pt.x >= btns[i]->x && pt.x <= btns[i]->x + btns[i]->w && pt.y >= btns[i]->y && pt.y <= btns[i]->y + btns[i]->h) {
+                    btns[i]->Check(pt.x, pt.y);
+                }
+                btns[i]->clicked = false;
+            }
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        }
+        case WM_MOUSEMOVE:
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+        case WM_DESTROY:
+            for(int i = 0; i < btnCount; i++) delete btns[i];
+            PostQuitMessage(0);
+            break;
+        default:
+            return DefWindowProc(hWnd, msg, wp, lp);
+    }
+    return 0;
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR cmd, int show) {
+    srand((unsigned int)time(NULL));
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInst;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(BG_COLOR);
+    wc.lpszClassName = "MyGame";
+    RegisterClassEx(&wc);
+    
+    mainWnd = CreateWindowEx(0, "MyGame", "Сессия - Игра", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, 0, 920, 600, NULL, NULL, hInst, NULL);
+    
+    if(!mainWnd) return FALSE;
+    ShowWindow(mainWnd, show);
+    UpdateWindow(mainWnd);
+    
+    MSG msg;
+    while(GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return msg.wParam;
+}
